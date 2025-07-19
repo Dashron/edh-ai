@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Plains",
+    "type_line": "Basic Land — Plains",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "legalities": {
+      "commander": "legal",
+      "legacy": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "",
+    "cmc": 0
+  },
+  {
+    "name": "Swamp",
+    "type_line": "Basic Land — Swamp",
+    "colors": [],
+    "color_identity": [],
+    "rarity": "common",
+    "legalities": {
+      "commander": "legal",
+      "legacy": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "",
+    "cmc": 0
+  },
+  {
+    "name": "Minthara, Merciless Soul",
+    "type_line": "Legendary Creature — Elf Paladin",
+    "colors": ["W", "B"],
+    "color_identity": ["W", "B"],
+    "rarity": "rare",
+    "legalities": {
+      "commander": "legal",
+      "legacy": "legal",
+      "vintage": "legal"
+    },
+    "mana_cost": "{2}{W}{B}",
+    "cmc": 4
+  }
+]

@@ -1,0 +1,22 @@
+# Invalid EDH Deck - Multiple rule violations
+# Problems: Too few cards, duplicate non-basics, no commander
+
+4 Lightning Bolt
+4 Counterspell
+4 Sol Ring
+2 Command Tower
+4 Mountain
+4 Island
+1 Time Walk
+1 Black Lotus
+1 Mox Pearl
+1 Mox Sapphire
+1 Mox Ruby
+1 Ancestral Recall
+1 Force of Will
+1 Brainstorm
+1 Lightning Bolt
+1 Shock
+1 Bolt
+2 Snapcaster Mage
+3 Tarmogoyf
