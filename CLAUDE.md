@@ -42,6 +42,21 @@ npm run reset-db
 
 # Import full Scryfall card dataset (with automatic reset)
 npm run import-cards <scryfall-json-file>
+
+# Query the SQLite database directly
+npm run query-db "<SQL_QUERY>"
+```
+
+### Web UI Commands
+```bash
+# Start the web UI development server
+npm run web-dev
+
+# Build the web UI for production
+npm run web-build
+
+# Start the web UI production server
+npm run web-start
 ```
 
 ### Data Management Workflow
@@ -62,6 +77,7 @@ npm run edh-validate ./decks/minthara.txt  # Validate a deck
 - **`types.ts`** - TypeScript interfaces for cards, validation rules, and results
 - **`importCards.ts`** - Streaming JSON parser for importing large Scryfall datasets with memory optimization
 - **`addDeckCards.ts`** - Quick deck-based database population utility
+- **`queryDb.ts`** - CLI tool for executing raw SQL queries against the card database
 
 ### Validation System
 
@@ -85,6 +101,37 @@ SQLite database (`data/cards.db`) stores card information with indexes for perfo
 2. **Database Lookup** - Card data is retrieved from SQLite database with async operations
 3. **Rule Validation** - All validation rules are executed in parallel against the deck
 4. **Result Formatting** - Results are formatted with commander analysis and detailed violation reporting
+
+## Web UI
+
+The project includes a Next.js-based web interface for interactive database querying.
+
+### Web UI Features
+- **SQL Query Editor** - CodeMirror-powered editor with SQL syntax highlighting
+- **Preset Queries** - Pre-built queries for common searches (commanders, banned cards, etc.)
+- **Interactive Results** - Tabular display with responsive design
+- **Real-time Execution** - Immediate query execution with loading states
+- **Error Handling** - User-friendly error messages for invalid queries
+
+### Web UI Architecture
+- **Next.js 14+** with TypeScript and App Router
+- **API Routes** - Secure database access via `/api/query` endpoint
+- **React Components** - Modern hooks-based UI with Tailwind CSS
+- **Security** - Read-only database access, SELECT-only query validation
+- **Database Integration** - Reuses existing SQLite database and connection logic
+
+### Starting the Web UI
+```bash
+# Development mode (with hot reload, runs in background)
+npm run web-dev  # Runs on http://localhost:3000
+
+# Check web server logs for debugging
+tail -f logs/web-dev.log
+
+# Production build and start
+npm run web-build
+npm run web-start
+```
 
 ## Testing
 
@@ -147,8 +194,10 @@ npx vitest run --coverage
 ### File Structure
 - `src/` - TypeScript source code with clear separation of concerns
 - `src/__tests__/` - Comprehensive test suite with fixtures
+- `web/` - Next.js React web UI for database querying
 - `data/` - SQLite database and downloaded Scryfall data (gitignored)
 - `decks/` - Sample deck files (gitignored)
+- `logs/` - Web server and application logs
 - `dist/` - Compiled JavaScript output
 
 ## Common Development Tasks
