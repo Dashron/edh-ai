@@ -87,7 +87,7 @@ export const EDH_RULES: EdHValidationRule[] = [
         id: 'singleton',
         name: 'Singleton Rule',
         description: 'No more than one copy of any card except basic lands and specific exceptions',
-        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase, isPauper?: boolean) => {
+        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase) => {
             const violations: RuleViolation[] = [];
             
             for (const [cardName, count] of Object.entries(cardCounts)) {
