@@ -6,7 +6,7 @@ import path from 'path';
 const DB_PATH = path.join(process.cwd(), '..', '..', 'data', 'cards.db');
 
 interface DatabaseRow {
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // Helper function to run SQL queries with Promise wrapper
@@ -26,6 +26,9 @@ export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json();
     
+    console.log('Received query:', query);
+    console.log('DB_PATH:', DB_PATH);
+    
     if (!query || typeof query !== 'string') {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 });
     }
@@ -38,10 +41,13 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    console.log('Creating database connection...');
     const db = new Database(DB_PATH);
     
     try {
+      console.log('Executing query...');
       const results = await runQuery(db, query);
+      console.log('Query results:', results.length, 'rows');
       
       return NextResponse.json({
         success: true,
@@ -49,6 +55,7 @@ export async function POST(request: NextRequest) {
         rowCount: results.length
       });
     } finally {
+      console.log('Closing database connection...');
       db.close();
     }
     
