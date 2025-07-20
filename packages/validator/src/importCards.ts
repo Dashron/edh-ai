@@ -32,9 +32,8 @@ async function streamJsonImport(jsonPath: string, db: CardDatabase): Promise<{ i
                 // Pause the stream while we process
                 pipeline.pause();
                 
-                // StreamArray gives us individual card objects in data.value and index in data.key
+                // StreamArray gives us individual card objects in data.value
                 const card = data.value as EdHCard;
-                const cardIndex = (data as any).key as number;
                 
                 // Early filtering - skip cards we don't need for EDH
                 if (!card.name || !card.type_line) {
