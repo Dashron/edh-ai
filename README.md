@@ -2,6 +2,14 @@
 
 A sophisticated TypeScript CLI tool for validating Magic: The Gathering EDH (Elder Dragon Highlander/Commander) deck files against official format rules, designed for integration with Claude Code.
 
+## ⚠️ SECURITY WARNING
+
+**THIS APPLICATION IS NOT SECURE FOR PUBLIC HOSTING**
+
+This tool includes a web interface that provides direct SQL query access to the database. It is intended for local development use only and should **NEVER** be deployed to a public server or hosted online. The web interface allows arbitrary SQL queries which could expose sensitive information or be exploited by malicious users.
+
+**Use only in local development environments.**
+
 ## Features
 
 ### Comprehensive Deck Validation
