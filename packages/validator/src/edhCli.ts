@@ -6,7 +6,7 @@ import { runEdHValidation } from './edhValidator.js';
 
 function showUsage(): void {
     console.log(`
-Usage: npm run edh-validate <path-to-deck-file>
+Usage: npm run edh-validate [--pauper] <path-to-deck-file>
 
 Validates an EDH/Commander deck file against official format rules.
 
@@ -20,13 +20,18 @@ Expected file format:
 Arguments:
   <path-to-deck-file>    Path to text file containing the deck list
 
+Options:
+  --pauper               Validate as Pauper EDH (PDH) format
+
 Rules checked:
-- Exactly 100 cards
+- Exactly 100 cards (30 life, 16 commander damage in PDH)
 - Singleton format (max 1 copy except basic lands)
-- Commander presence (basic check)
+- Commander presence (legendary creature/planeswalker for EDH, uncommon creature for PDH)
+- Format legality (all commons for PDH, commander legal for EDH)
 
 Examples:
   npm run edh-validate ./my-deck.txt
+  npm run edh-validate --pauper ./my-pauper-deck.txt
   npm run edh-validate /path/to/commander-deck.txt
 `);
 }
@@ -39,7 +44,9 @@ async function main(): Promise<void> {
         process.exit(0);
     }
     
-    const filePath = args[0];
+    // Parse arguments
+    const isPauper = args.includes('--pauper');
+    const filePath = args.find(arg => !arg.startsWith('--'));
     
     if (!filePath) {
         console.error('❌ Error: Please provide a path to a deck file.');
@@ -74,7 +81,7 @@ async function main(): Promise<void> {
         }
         
         // Validate the deck
-        await runEdHValidation(deckContent);
+        await runEdHValidation(deckContent, isPauper);
         
     } catch (error) {
         console.error(`❌ Error reading file: ${error instanceof Error ? error.message : String(error)}`);

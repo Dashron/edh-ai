@@ -145,7 +145,7 @@ describe('EDH Validator', () => {
         });
 
         describe('commander_check rule', () => {
-            it('should pass with a valid commander', async () => {
+            it('should pass with a valid commander in regular EDH', async () => {
                 const rule = EDH_RULES.find(r => r.id === 'commander_check')!;
                 const cardCounts = { 'atraxa, praetors\' voice': 1 };
                 
@@ -158,12 +158,30 @@ describe('EDH Validator', () => {
                     rarity: 'mythic'
                 });
                 
-                const violations = await rule.check(cardCounts, mockDb);
+                const violations = await rule.check(cardCounts, mockDb, false);
                 
                 expect(violations).toHaveLength(0);
             });
 
-            it('should fail without a valid commander', async () => {
+            it('should pass with a valid commander in pauper EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'commander_check')!;
+                const cardCounts = { 'crypt rats': 1 };
+                
+                // Mock Crypt Rats as uncommon creature
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Crypt Rats',
+                    type_line: 'Creature — Rat',
+                    colors: ['B'],
+                    color_identity: ['B'],
+                    rarity: 'uncommon'
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(0);
+            });
+
+            it('should fail without a valid commander in regular EDH', async () => {
                 const rule = EDH_RULES.find(r => r.id === 'commander_check')!;
                 const cardCounts = { 'sol ring': 1 };
                 
@@ -176,11 +194,172 @@ describe('EDH Validator', () => {
                     rarity: 'uncommon'
                 });
                 
-                const violations = await rule.check(cardCounts, mockDb);
+                const violations = await rule.check(cardCounts, mockDb, false);
                 
                 expect(violations).toHaveLength(1);
                 expect(violations[0].severity).toBe('error');
-                expect(violations[0].message).toContain('No valid commander');
+                expect(violations[0].message).toContain('legendary creature or planeswalker');
+            });
+
+            it('should fail without a valid commander in pauper EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'commander_check')!;
+                const cardCounts = { 'sol ring': 1 };
+                
+                // Mock Sol Ring as non-creature
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Sol Ring',
+                    type_line: 'Artifact',
+                    colors: [],
+                    color_identity: [],
+                    rarity: 'uncommon'
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(1);
+                expect(violations[0].severity).toBe('error');
+                expect(violations[0].message).toContain('uncommon creature');
+            });
+
+            it('should reject legendary creature with wrong rarity in pauper EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'commander_check')!;
+                const cardCounts = { 'atraxa, praetors\' voice': 1 };
+                
+                // Mock Atraxa as legendary but mythic (not uncommon)
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Atraxa, Praetors\' Voice',
+                    type_line: 'Legendary Creature — Phyrexian Angel Horror',
+                    colors: ['W', 'U', 'B', 'G'],
+                    color_identity: ['W', 'U', 'B', 'G'],
+                    rarity: 'mythic'
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(1);
+                expect(violations[0].severity).toBe('error');
+                expect(violations[0].message).toContain('uncommon creature');
+            });
+        });
+
+        describe('format_legality rule', () => {
+            it('should pass for legal cards in regular EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'format_legality')!;
+                const cardCounts = { 'sol ring': 1 };
+                
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Sol Ring',
+                    type_line: 'Artifact',
+                    colors: [],
+                    color_identity: [],
+                    rarity: 'uncommon',
+                    legalities: { commander: 'legal' }
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, false);
+                
+                expect(violations).toHaveLength(0);
+            });
+
+            it('should fail for banned cards in regular EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'format_legality')!;
+                const cardCounts = { 'black lotus': 1 };
+                
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Black Lotus',
+                    type_line: 'Artifact',
+                    colors: [],
+                    color_identity: [],
+                    rarity: 'rare',
+                    legalities: { commander: 'banned' }
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, false);
+                
+                expect(violations).toHaveLength(1);
+                expect(violations[0].severity).toBe('error');
+                expect(violations[0].message).toContain('banned in Commander');
+            });
+
+            it('should pass for common cards in pauper EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'format_legality')!;
+                const cardCounts = { 'llanowar elves': 1 };
+                
+                mockDb.getCard.mockResolvedValue({
+                    name: 'Llanowar Elves',
+                    type_line: 'Creature — Elf Druid',
+                    colors: ['G'],
+                    color_identity: ['G'],
+                    rarity: 'common',
+                    legalities: { pauper: 'legal' }
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(0);
+            });
+
+            it('should fail for non-common cards in pauper EDH deck', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'format_legality')!;
+                const cardCounts = { 'sol ring': 1, 'crypt rats': 1 };
+                
+                mockDb.getCard.mockImplementation((name: string) => {
+                    if (name === 'sol ring') {
+                        return Promise.resolve({
+                            name: 'Sol Ring',
+                            type_line: 'Artifact',
+                            colors: [],
+                            color_identity: [],
+                            rarity: 'uncommon',
+                            legalities: { pauper: 'legal' }
+                        });
+                    }
+                    return Promise.resolve({
+                        name: 'Crypt Rats',
+                        type_line: 'Creature — Rat',
+                        colors: ['B'],
+                        color_identity: ['B'],
+                        rarity: 'uncommon',
+                        legalities: { pauper: 'legal' }
+                    });
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(1);
+                expect(violations[0].severity).toBe('error');
+                expect(violations[0].message).toContain('must be common rarity');
+                expect(violations[0].affectedCards).toContain('sol ring');
+            });
+
+            it('should allow uncommon commanders in pauper EDH', async () => {
+                const rule = EDH_RULES.find(r => r.id === 'format_legality')!;
+                const cardCounts = { 'crypt rats': 1, 'llanowar elves': 1 };
+                
+                mockDb.getCard.mockImplementation((name: string) => {
+                    if (name === 'crypt rats') {
+                        return Promise.resolve({
+                            name: 'Crypt Rats',
+                            type_line: 'Creature — Rat',
+                            colors: ['B'],
+                            color_identity: ['B'],
+                            rarity: 'uncommon',
+                            legalities: { pauper: 'legal' }
+                        });
+                    }
+                    return Promise.resolve({
+                        name: 'Llanowar Elves',
+                        type_line: 'Creature — Elf Druid',
+                        colors: ['G'],
+                        color_identity: ['G'],
+                        rarity: 'common',
+                        legalities: { pauper: 'legal' }
+                    });
+                });
+                
+                const violations = await rule.check(cardCounts, mockDb, true);
+                
+                expect(violations).toHaveLength(0);
             });
         });
     });
@@ -226,6 +405,58 @@ describe('EDH Validator', () => {
             });
 
             const result = await validateEdHDeck(deckList);
+
+            expect(result.isValid).toBe(true);
+            expect(result.totalCards).toBe(100);
+            expect(result.violations.filter(v => v.severity === 'error')).toHaveLength(0);
+            
+            // Close the database manually since validateEdHDeck doesn't close it
+            if (result.cardDb) {
+                await result.cardDb.close();
+            }
+            expect(mockDb.close).toHaveBeenCalled();
+        });
+
+        it('should validate a proper pauper EDH deck', async () => {
+            const deckList = `
+1 Crypt Rats
+1 Llanowar Elves
+98 Swamp
+            `.trim();
+
+            // Mock the database connection
+            mockDb.getCardCount.mockResolvedValue(100);
+            mockDb.getCard.mockImplementation((name: string) => {
+                if (name === 'swamp') {
+                    return Promise.resolve({
+                        name: 'Swamp',
+                        type_line: 'Basic Land — Swamp',
+                        colors: [],
+                        color_identity: [],
+                        rarity: 'common'
+                    });
+                }
+                if (name === 'crypt rats') {
+                    return Promise.resolve({
+                        name: 'Crypt Rats',
+                        type_line: 'Creature — Rat',
+                        colors: ['B'],
+                        color_identity: ['B'],
+                        rarity: 'uncommon',
+                        legalities: { pauper: 'legal' }
+                    });
+                }
+                return Promise.resolve({
+                    name: 'Llanowar Elves',
+                    type_line: 'Creature — Elf Druid',
+                    colors: ['G'],
+                    color_identity: ['G'],
+                    rarity: 'common',
+                    legalities: { pauper: 'legal' }
+                });
+            });
+
+            const result = await validateEdHDeck(deckList, true);
 
             expect(result.isValid).toBe(true);
             expect(result.totalCards).toBe(100);

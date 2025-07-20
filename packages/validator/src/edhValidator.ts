@@ -42,19 +42,26 @@ function allowsMultipleCopies(card: EdHCard): boolean {
     return multipleAllowed.includes(name);
 }
 
-function isLegalCommander(card: EdHCard): boolean {
+function isLegalCommander(card: EdHCard, isPauper: boolean = false): boolean {
     if (!card.type_line) return false;
     const typeLine = card.type_line.toLowerCase();
     
-    // Must be legendary and a creature or planeswalker that can be a commander
-    const isLegendary = typeLine.includes('legendary');
-    const isCreature = typeLine.includes('creature');
-    const isPlaneswalker = typeLine.includes('planeswalker');
-    
-    // Check for specific commander abilities (simplified)
-    const canBeCommander = isLegendary && (isCreature || isPlaneswalker);
-    
-    return canBeCommander;
+    if (isPauper) {
+        // Pauper EDH: Any uncommon creature can be commander
+        const isCreature = typeLine.includes('creature');
+        const isUncommon = card.rarity?.toLowerCase() === 'uncommon';
+        return isCreature && isUncommon;
+    } else {
+        // Regular EDH: Must be legendary and a creature or planeswalker that can be a commander
+        const isLegendary = typeLine.includes('legendary');
+        const isCreature = typeLine.includes('creature');
+        const isPlaneswalker = typeLine.includes('planeswalker');
+        
+        // Check for specific commander abilities (simplified)
+        const canBeCommander = isLegendary && (isCreature || isPlaneswalker);
+        
+        return canBeCommander;
+    }
 }
 
 export const EDH_RULES: EdHValidationRule[] = [
@@ -62,13 +69,14 @@ export const EDH_RULES: EdHValidationRule[] = [
         id: 'deck_size',
         name: 'Deck Size',
         description: 'EDH decks must contain exactly 100 cards',
-        check: async (cardCounts: Record<string, number>) => {
+        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase, isPauper?: boolean) => {
             const totalCards = Object.values(cardCounts).reduce((sum, count) => sum + count, 0);
             if (totalCards !== 100) {
+                const formatName = isPauper ? 'Pauper EDH' : 'EDH';
                 return [{
                     ruleId: 'deck_size',
                     ruleName: 'Deck Size',
-                    message: `Deck must contain exactly 100 cards. Found ${totalCards} cards.`,
+                    message: `${formatName} deck must contain exactly 100 cards. Found ${totalCards} cards.`,
                     severity: 'error'
                 }];
             }
@@ -79,7 +87,7 @@ export const EDH_RULES: EdHValidationRule[] = [
         id: 'singleton',
         name: 'Singleton Rule',
         description: 'No more than one copy of any card except basic lands and specific exceptions',
-        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase) => {
+        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase, isPauper?: boolean) => {
             const violations: RuleViolation[] = [];
             
             for (const [cardName, count] of Object.entries(cardCounts)) {
@@ -113,7 +121,7 @@ export const EDH_RULES: EdHValidationRule[] = [
         id: 'commander_check',
         name: 'Commander Required',
         description: 'Deck must have a designated commander',
-        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase) => {
+        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase, isPauper?: boolean) => {
             if (!cardDb) {
                 return [{
                     ruleId: 'commander_check',
@@ -126,16 +134,19 @@ export const EDH_RULES: EdHValidationRule[] = [
             const possibleCommanders: EdHCard[] = [];
             for (const cardName of Object.keys(cardCounts)) {
                 const card = await cardDb.getCard(cardName);
-                if (card && isLegalCommander(card)) {
+                if (card && isLegalCommander(card, isPauper)) {
                     possibleCommanders.push(card);
                 }
             }
             
             if (possibleCommanders.length === 0) {
+                const commanderRequirement = isPauper ? 
+                    'uncommon creature' : 
+                    'legendary creature or planeswalker';
                 return [{
                     ruleId: 'commander_check',
                     ruleName: 'Commander Required',
-                    message: 'No valid commander found. Deck must contain a legendary creature or planeswalker.',
+                    message: `No valid commander found. Deck must contain a ${commanderRequirement}.`,
                     severity: 'error'
                 }];
             }
@@ -147,7 +158,7 @@ export const EDH_RULES: EdHValidationRule[] = [
         id: 'format_legality',
         name: 'Format Legality',
         description: 'All cards must be legal in Commander format',
-        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase) => {
+        check: async (cardCounts: Record<string, number>, cardDb?: CardDatabase, isPauper?: boolean) => {
             if (!cardDb) {
                 return [{
                     ruleId: 'format_legality',
@@ -161,16 +172,47 @@ export const EDH_RULES: EdHValidationRule[] = [
             
             for (const cardName of Object.keys(cardCounts)) {
                 const card = await cardDb.getCard(cardName);
-                if (card && card.legalities) {
-                    const commanderLegality = card.legalities.commander;
-                    if (commanderLegality === 'banned') {
-                        violations.push({
-                            ruleId: 'format_legality',
-                            ruleName: 'Format Legality',
-                            message: `"${cardName}" is banned in Commander format.`,
-                            severity: 'error',
-                            affectedCards: [cardName]
-                        });
+                if (card) {
+                    if (isPauper) {
+                        // Pauper EDH: All cards except commander must be common
+                        const isCommander = isLegalCommander(card, true);
+                        const isCommon = card.rarity?.toLowerCase() === 'common';
+                        const isBasic = isBasicLand(card);
+                        
+                        if (!isCommander && !isCommon && !isBasic) {
+                            violations.push({
+                                ruleId: 'format_legality',
+                                ruleName: 'Format Legality',
+                                message: `"${cardName}" must be common rarity in Pauper EDH (found: ${card.rarity}).`,
+                                severity: 'error',
+                                affectedCards: [cardName]
+                            });
+                        }
+                        
+                        // Also check pauper legality if available
+                        if (card.legalities?.pauper === 'banned') {
+                            violations.push({
+                                ruleId: 'format_legality',
+                                ruleName: 'Format Legality',
+                                message: `"${cardName}" is banned in Pauper format.`,
+                                severity: 'error',
+                                affectedCards: [cardName]
+                            });
+                        }
+                    } else {
+                        // Regular EDH: Check commander ban list
+                        if (card.legalities) {
+                            const commanderLegality = card.legalities.commander;
+                            if (commanderLegality === 'banned') {
+                                violations.push({
+                                    ruleId: 'format_legality',
+                                    ruleName: 'Format Legality',
+                                    message: `"${cardName}" is banned in Commander format.`,
+                                    severity: 'error',
+                                    affectedCards: [cardName]
+                                });
+                            }
+                        }
                     }
                 }
             }
@@ -219,7 +261,7 @@ function countCards(deck: string[]): Record<string, number> {
     return cardCounts;
 }
 
-export async function validateEdHDeck(deckList: string): Promise<EdHValidationResult> {
+export async function validateEdHDeck(deckList: string, isPauper: boolean = false): Promise<EdHValidationResult> {
     const deck = parseDeck(deckList);
     const cardCounts = countCards(deck);
     const totalCards = deck.length;
@@ -236,7 +278,7 @@ export async function validateEdHDeck(deckList: string): Promise<EdHValidationRe
     
     // Run all validation rules
     for (const rule of EDH_RULES) {
-        const ruleViolations = await rule.check(cardCounts, cardDb);
+        const ruleViolations = await rule.check(cardCounts, cardDb, isPauper);
         violations = violations.concat(ruleViolations);
     }
     
@@ -251,11 +293,12 @@ export async function validateEdHDeck(deckList: string): Promise<EdHValidationRe
     };
 }
 
-export async function runEdHValidation(deckList: string): Promise<void> {
-    const result = await validateEdHDeck(deckList);
+export async function runEdHValidation(deckList: string, isPauper: boolean = false): Promise<void> {
+    const result = await validateEdHDeck(deckList, isPauper);
     
     try {
-        console.log(`\n=== EDH Deck Validation Results ===`);
+        const formatName = isPauper ? 'Pauper EDH' : 'EDH';
+        console.log(`\n=== ${formatName} Deck Validation Results ===`);
         console.log(`Total Cards: ${result.totalCards}`);
         console.log(`Valid: ${result.isValid ? '✅' : '❌'}`);
         
@@ -278,7 +321,7 @@ export async function runEdHValidation(deckList: string): Promise<void> {
             
             for (const cardName of Object.keys(result.cardCounts)) {
                 const card = await result.cardDb.getCard(cardName);
-                if (card && isLegalCommander(card)) {
+                if (card && isLegalCommander(card, isPauper)) {
                     commanders.push(card);
                 }
             }
@@ -288,7 +331,8 @@ export async function runEdHValidation(deckList: string): Promise<void> {
                 for (const commander of commanders) {
                     const colors = commander.color_identity.length > 0 ? 
                         commander.color_identity.join('') : 'Colorless';
-                    console.log(`  • ${commander.name} (${colors})`);
+                    const rarity = commander.rarity ? ` - ${commander.rarity}` : '';
+                    console.log(`  • ${commander.name} (${colors}${rarity})`);
                 }
             }
         }

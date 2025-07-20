@@ -14,6 +14,7 @@ export interface DatabaseCard {
     mana_cost?: string;
     cmc?: number;
     image_uris?: string; // JSON string
+    card_faces?: string; // JSON string
 }
 
 export class CardDatabase {
@@ -45,7 +46,8 @@ export class CardDatabase {
                     legalities TEXT NOT NULL,
                     mana_cost TEXT,
                     cmc REAL,
-                    image_uris TEXT
+                    image_uris TEXT,
+                    card_faces TEXT
                 );
                 
                 CREATE INDEX IF NOT EXISTS idx_type_line ON cards(type_line);
@@ -84,7 +86,8 @@ export class CardDatabase {
                         legalities: JSON.parse(row.legalities),
                         mana_cost: row.mana_cost,
                         cmc: row.cmc,
-                        image_uris: row.image_uris ? JSON.parse(row.image_uris) : undefined
+                        image_uris: row.image_uris ? JSON.parse(row.image_uris) : undefined,
+                        card_faces: row.card_faces ? JSON.parse(row.card_faces) : undefined
                     };
                     resolve(card);
                 }
@@ -98,9 +101,16 @@ export class CardDatabase {
         return new Promise((resolve, reject) => {
             const sql = `
                 INSERT OR REPLACE INTO cards 
-                (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc, image_uris)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc, image_uris, card_faces)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
+            
+            // Extract image_uris from card_faces if main image_uris is not available
+            let imageUris = card.image_uris;
+            if (!imageUris && card.card_faces && card.card_faces.length > 0) {
+                // Use the front face image for dual-faced cards
+                imageUris = card.card_faces[0].image_uris;
+            }
             
             const values = [
                 card.name,
@@ -111,7 +121,8 @@ export class CardDatabase {
                 JSON.stringify(card.legalities || {}),
                 card.mana_cost,
                 card.cmc,
-                card.image_uris ? JSON.stringify(card.image_uris) : null
+                imageUris ? JSON.stringify(imageUris) : null,
+                card.card_faces ? JSON.stringify(card.card_faces) : null
             ];
             
             this.db!.run(sql, values, (err) => {

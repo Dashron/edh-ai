@@ -8,6 +8,15 @@ export interface Card {
 		normal?: string;
 		large?: string;
 	};
+	card_faces?: Array<{
+		name: string;
+		image_uris?: {
+			small?: string;
+			normal?: string;
+			large?: string;
+		};
+	}>;
+	layout?: string;
 	prices?: {
 		usd?: string | null;
 		usd_foil?: string | null;
@@ -31,7 +40,7 @@ export interface EdHValidationRule {
     id: string;
     name: string;
     description: string;
-    check: (cardCounts: Record<string, number>, cardDb?: import('./database.js').CardDatabase) => Promise<RuleViolation[]>;
+    check: (cardCounts: Record<string, number>, cardDb?: import('./database.js').CardDatabase, isPauper?: boolean) => Promise<RuleViolation[]>;
 }
 
 export interface RuleViolation {
