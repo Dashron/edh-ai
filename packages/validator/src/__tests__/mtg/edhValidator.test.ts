@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as fs from 'fs';
-import * as path from 'path';
 import { 
     validateEdHDeck, 
     loadCardDatabase, 
     EDH_RULES
 } from '../../edhValidator.js';
-import type { EdHCard, EdHValidationResult } from '../../types.js';
+import type { EdHCard } from '../../types.js';
 
 // Mock fs module
 vi.mock('fs');
@@ -109,7 +108,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const singletonRule = EDH_RULES.find(rule => rule.id === 'singleton')!;
-                const violations = await singletonRule.check(cardCounts, mockCardData as any);
+                const violations = await singletonRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(0);
             });
@@ -133,7 +132,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const singletonRule = EDH_RULES.find(rule => rule.id === 'singleton')!;
-                const violations = await singletonRule.check(cardCounts, mockCardData as any);
+                const violations = await singletonRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(0);
             });
@@ -170,7 +169,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const commanderRule = EDH_RULES.find(rule => rule.id === 'commander_check')!;
-                const violations = await commanderRule.check(cardCounts, mockCardData as any);
+                const violations = await commanderRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(0);
             });
@@ -202,7 +201,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const commanderRule = EDH_RULES.find(rule => rule.id === 'commander_check')!;
-                const violations = await commanderRule.check(cardCounts, mockCardData as any);
+                const violations = await commanderRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(1);
                 expect(violations[0].severity).toBe('error');
@@ -248,7 +247,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const legalityRule = EDH_RULES.find(rule => rule.id === 'format_legality')!;
-                const violations = await legalityRule.check(cardCounts, mockCardData as any);
+                const violations = await legalityRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(0);
             });
@@ -280,7 +279,7 @@ describe('EDH Validator', async () => {
                 };
 
                 const legalityRule = EDH_RULES.find(rule => rule.id === 'format_legality')!;
-                const violations = await legalityRule.check(cardCounts, mockCardData as any);
+                const violations = await legalityRule.check(cardCounts, mockCardData as import('../../database.js').CardDatabase);
 
                 expect(violations).toHaveLength(2);
                 expect(violations[0].severity).toBe('error');

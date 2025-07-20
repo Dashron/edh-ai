@@ -14,7 +14,7 @@
     "query-db": "tsc && node dist/queryDb.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ./src",
+    "lint": "eslint ./src --config ../../eslint.config.mjs",
     "clean": "rm -rf dist"
   },
   "bin": {

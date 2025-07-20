@@ -8,9 +8,9 @@ async function queryDatabase(sql: string): Promise<void> {
     try {
         await db.connect();
         
-        const result = await new Promise((resolve, reject) => {
-            // @ts-ignore - accessing private db property for raw queries
-            db['db'].all(sql, (err: Error | null, rows: any[]) => {
+        const result = await new Promise<unknown[]>((resolve, reject) => {
+            // @ts-expect-error - accessing private db property for raw queries
+            db['db'].all(sql, (err: Error | null, rows: unknown[]) => {
                 if (err) {
                     reject(err);
                 } else {

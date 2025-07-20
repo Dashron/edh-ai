@@ -4,14 +4,13 @@ import {
     loadCardDatabase, 
     EDH_RULES
 } from '../edhValidator.js';
-import type { EdHCard, EdHValidationResult } from '../types.js';
 import { CardDatabase } from '../database.js';
 
 // Mock the CardDatabase
 vi.mock('../database.js');
 
 describe('EDH Validator', () => {
-    let mockDb: any;
+    let mockDb: CardDatabase;
 
     beforeEach(() => {
         vi.clearAllMocks();

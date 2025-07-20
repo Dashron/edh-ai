@@ -4,7 +4,6 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { CardDatabase } from './database.js';
 import type { EdHCard } from './types.js';
-import StreamValues from 'stream-json/streamers/StreamValues.js';
 import parser from 'stream-json';
 import StreamArray from 'stream-json/streamers/StreamArray.js';
 
@@ -23,7 +22,7 @@ async function streamJsonImport(jsonPath: string, db: CardDatabase): Promise<{ i
         
         let isFirstCard = true;
         
-        pipeline.on('data', async (data: any) => {
+        pipeline.on('data', async (data: { value: EdHCard }) => {
             try {
                 if (isFirstCard) {
                     console.log('🚀 Started processing cards from stream...');
@@ -35,7 +34,7 @@ async function streamJsonImport(jsonPath: string, db: CardDatabase): Promise<{ i
                 
                 // StreamArray gives us individual card objects in data.value and index in data.key
                 const card = data.value as EdHCard;
-                const cardIndex = data.key as number;
+                const cardIndex = (data as any).key as number;
                 
                 // Early filtering - skip cards we don't need for EDH
                 if (!card.name || !card.type_line) {
@@ -62,7 +61,7 @@ async function streamJsonImport(jsonPath: string, db: CardDatabase): Promise<{ i
                 
                 // Progress indicator and periodic cleanup
                 if (imported % 1000 === 0) {
-                    console.log(`📦 Imported ${imported} cards (processed ${cardIndex + 1} total cards from file)...`);
+                    console.log(`📦 Imported ${imported} cards...`);
                     // Force garbage collection every 5000 cards if available
                     if (imported % 5000 === 0 && global.gc) {
                         const memBefore = process.memoryUsage();
@@ -170,27 +169,37 @@ async function importCardsFromJson(jsonPath: string): Promise<void> {
 async function main(): Promise<void> {
     const args = process.argv.slice(2);
     
-    if (args.length === 0 || args.includes('--help') || args.includes('-h')) {
+    if (args.includes('--help') || args.includes('-h')) {
         console.log(`
-Usage: npm run import-cards <path-to-scryfall-json>
+Usage: npm run import-cards [--all] [path-to-scryfall-json]
 
 Imports Scryfall card data from JSON file into SQLite database.
 
+Options:
+  --all                      Import all cards instead of oracle cards
+  --help, -h                 Show this help message
+
 Arguments:
-  <path-to-scryfall-json>    Path to Scryfall all-cards JSON file
+  <path-to-scryfall-json>    Path to Scryfall JSON file (optional if using default files)
 
 Examples:
-  npm run import-cards ./data/scryfall/all-cards.json
-  npm run import-cards ./data/scryfall/all-cards-20250715092339.json
+  npm run import-cards                              # Import oracle cards from data/oracle-cards.json (default)
+  npm run import-cards --all                       # Import all cards from data/all-cards.json
+  npm run import-cards ./custom/oracle.json        # Import from custom path
+  npm run import-cards --all ./custom/all-cards.json  # Import all cards from custom path
 `);
         process.exit(0);
     }
     
-    const jsonPath = args[0];
+    const isAll = args.includes('--all');
+    const pathArgs = args.filter(arg => !arg.startsWith('--'));
     
-    if (!jsonPath) {
-        console.error('❌ Error: Please provide a path to the Scryfall JSON file.');
-        process.exit(1);
+    let jsonPath: string;
+    if (pathArgs.length > 0) {
+        jsonPath = pathArgs[0];
+    } else {
+        // Use default paths - oracle cards by default
+        jsonPath = isAll ? '../../data/all-cards.json' : '../../data/oracle-cards.json';
     }
     
     const resolvedPath = path.resolve(jsonPath);
@@ -199,6 +208,8 @@ Examples:
         console.error(`❌ Error: File not found: ${resolvedPath}`);
         process.exit(1);
     }
+    
+    console.log(`📁 Importing ${isAll ? 'all' : 'oracle'} cards from: ${resolvedPath}`);
     
     try {
         await importCardsFromJson(resolvedPath);

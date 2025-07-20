@@ -40,8 +40,11 @@ npm run download-cards
 # Reset/clear the card database
 npm run reset-db
 
-# Import full Scryfall card dataset (with automatic reset)
-npm run import-cards <scryfall-json-file>
+# Import Scryfall card dataset
+npm run import-cards                    # Import oracle cards from data/oracle-cards.json (default)
+npm run import-cards --all             # Import all cards from data/all-cards.json
+npm run import-cards <custom-path>      # Import from custom file path
+npm run import-cards --all <path>      # Import all cards from custom path
 
 # Query the SQLite database directly
 npm run query-db "<SQL_QUERY>"
@@ -63,7 +66,9 @@ npm run web-start
 ```bash
 # Complete setup workflow:
 npm run download-cards        # Download latest Scryfall data (~2.3GB)
-npm run import-cards data/all-cards.json  # Import with memory optimization
+npm run import-cards          # Import oracle cards with memory optimization (default, faster)
+# OR
+npm run import-cards --all    # Import all cards (larger dataset, includes reprints)
 npm run edh-validate ./decks/minthara.txt  # Validate a deck
 ```
 

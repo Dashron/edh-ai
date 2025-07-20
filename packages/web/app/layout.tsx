@@ -24,6 +24,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link 
+          rel="stylesheet" 
+          href="https://cdn.jsdelivr.net/npm/mana-font@latest/css/mana.css" 
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

@@ -2,7 +2,7 @@ import sqlite3 from 'sqlite3';
 import * as path from 'path';
 import type { EdHCard } from './types.js';
 
-const DB_PATH = path.join(process.cwd(), 'data', 'cards.db');
+const DB_PATH = path.join(process.cwd(), '..', '..', 'data', 'cards.db');
 
 export interface DatabaseCard {
     name: string;
@@ -13,6 +13,7 @@ export interface DatabaseCard {
     legalities: string; // JSON string
     mana_cost?: string;
     cmc?: number;
+    image_uris?: string; // JSON string
 }
 
 export class CardDatabase {
@@ -43,7 +44,8 @@ export class CardDatabase {
                     rarity TEXT NOT NULL,
                     legalities TEXT NOT NULL,
                     mana_cost TEXT,
-                    cmc REAL
+                    cmc REAL,
+                    image_uris TEXT
                 );
                 
                 CREATE INDEX IF NOT EXISTS idx_type_line ON cards(type_line);
@@ -81,7 +83,8 @@ export class CardDatabase {
                         rarity: row.rarity,
                         legalities: JSON.parse(row.legalities),
                         mana_cost: row.mana_cost,
-                        cmc: row.cmc
+                        cmc: row.cmc,
+                        image_uris: row.image_uris ? JSON.parse(row.image_uris) : undefined
                     };
                     resolve(card);
                 }
@@ -95,8 +98,8 @@ export class CardDatabase {
         return new Promise((resolve, reject) => {
             const sql = `
                 INSERT OR REPLACE INTO cards 
-                (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc, image_uris)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             `;
             
             const values = [
@@ -107,7 +110,8 @@ export class CardDatabase {
                 card.rarity || '',
                 JSON.stringify(card.legalities || {}),
                 card.mana_cost,
-                card.cmc
+                card.cmc,
+                card.image_uris ? JSON.stringify(card.image_uris) : null
             ];
             
             this.db!.run(sql, values, (err) => {
@@ -129,8 +133,8 @@ export class CardDatabase {
                 
                 const stmt = this.db!.prepare(`
                     INSERT OR REPLACE INTO cards 
-                    (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    (name, type_line, colors, color_identity, rarity, legalities, mana_cost, cmc, image_uris)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 `);
                 
                 for (const card of cards) {
@@ -142,7 +146,8 @@ export class CardDatabase {
                         card.rarity || '',
                         JSON.stringify(card.legalities || {}),
                         card.mana_cost,
-                        card.cmc
+                        card.cmc,
+                        card.image_uris ? JSON.stringify(card.image_uris) : null
                     ];
                     stmt.run(values);
                 }
